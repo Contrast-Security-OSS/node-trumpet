@@ -4,7 +4,7 @@ var through = require('through2');
 var duplexer = require('duplexer2');
 
 var tokenize = require('html-tokenize');
-var select = require('html-select');
+var select = require('@contrast/html-select');
 
 var wrapElem = require('./lib/wrap.js');
 
@@ -60,7 +60,7 @@ Trumpet.prototype._write = function (buf, enc, next) {
 Trumpet.prototype.select = function (str, cb) {
     var self = this;
     var first = true;
-    
+
     var res = self._selectAll(str, function (elem) {
         if (!first) return;
         first = false;
@@ -80,61 +80,61 @@ Trumpet.prototype._selectAll = function (str, cb) {
     var self = this;
     var readers = [], writers = [], duplex = [];
     var gets = [], getss = [], sets = [], removes = [];
-    
+
     this.once('_end', function () {
         readers.splice(0).forEach(function (r) {
             r.end();
             r.resume();
         });
-        
+
         duplex.splice(0).forEach(function (d) {
             d.input.end();
             d.input.resume();
         });
     });
-    
+
     var element, welem;
     this._select.select(str, function (elem) {
         element = elem;
         welem = wrapElem(elem);
         if (cb) cb(welem);
-        
+
         elem.once('close', function () {
             element = null;
             welem = null;
         });
-        
+
         readers.splice(0).forEach(function (r) {
             welem.createReadStream(r._options).pipe(r);
         });
-        
+
         writers.splice(0).forEach(function (w) {
             w.pipe(welem.createWriteStream(w._options));
         });
-        
+
         duplex.splice(0).forEach(function (d) {
             d.input.pipe(welem.createStream(d.options))
                 .pipe(d.output)
             ;
         });
-        
+
         gets.splice(0).forEach(function (g) {
             welem.getAttribute(g[0], g[1]);
         });
-        
+
         getss.splice(0).forEach(function (cb) {
             welem.getAttributes(cb);
         });
-        
+
         sets.splice(0).forEach(function (g) {
             welem.setAttribute(g[0], g[1]);
         });
-        
+
         removes.splice(0).forEach(function (key) {
             welem.removeAttribute(key);
         });
     });
-    
+
     return {
         getAttribute: function (key, cb) {
             if (welem) return welem.getAttribute(key, cb);
